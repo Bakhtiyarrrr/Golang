@@ -193,6 +193,17 @@ func (m *TaskManager) GetAnalysis(id int) (AnalysisTask, error) {
 	return copyTask, nil
 }
 
+// ListAnalyses returns independent copies ordered by creation ID.
+func (m *TaskManager) ListAnalyses() []AnalysisTask {
+	result := make([]AnalysisTask, 0, len(m.analyses))
+	for id := range m.analyses {
+		analysis, _ := m.GetAnalysis(id)
+		result = append(result, analysis)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].ID < result[j].ID })
+	return result
+}
+
 func printTasks(w io.Writer, tasks []Todo) {
 	if len(tasks) == 0 {
 		fmt.Fprintln(w, "No tasks yet. Add your first task!")
@@ -220,6 +231,25 @@ func printStatistics(w io.Writer, stats Statistics) {
 	fmt.Fprintf(w, "Completed:         %d\n", stats.Completed)
 	fmt.Fprintf(w, "Not completed:     %d\n", stats.NotCompleted)
 	fmt.Fprintf(w, "Completion rate:   %.1f%%\n", stats.CompletionRate)
+}
+
+func printAnalysisHistory(w io.Writer, analyses []AnalysisTask) {
+	fmt.Fprintln(w, "\n========== ANALYSIS HISTORY ==========")
+	if len(analyses) == 0 {
+		fmt.Fprintln(w, "No saved analyses yet. Choose option 7 first.")
+		return
+	}
+	fmt.Fprintln(w, "ID   | STATUS      | TOTAL | COMPLETED | NOT COMPLETED | PROGRESS")
+	fmt.Fprintln(w, "-----+-------------+-------+-----------+---------------+---------")
+	for _, analysis := range analyses {
+		if analysis.Result == nil {
+			fmt.Fprintf(w, "%-4d | %-11s |     - |         - |             - |       -\n", analysis.ID, analysis.Status)
+			continue
+		}
+		s := analysis.Result
+		fmt.Fprintf(w, "%-4d | %-11s | %5d | %9d | %13d | %7.1f%%\n",
+			analysis.ID, analysis.Status, s.Total, s.Completed, s.NotCompleted, s.CompletionRate)
+	}
 }
 
 func readLine(scanner *bufio.Scanner, w io.Writer, prompt string) (string, error) {
@@ -257,9 +287,8 @@ func runCLI(r io.Reader, w io.Writer) error {
 		fmt.Fprintln(w, "4. Update task name")
 		fmt.Fprintln(w, "5. Delete task")
 		fmt.Fprintln(w, "6. Find task by ID")
-		fmt.Fprintln(w, "7. Show statistics")
-		fmt.Fprintln(w, "8. Create and process analysis")
-		fmt.Fprintln(w, "9. View saved analysis")
+		fmt.Fprintln(w, "7. Show statistics (save analysis)")
+		fmt.Fprintln(w, "8. Analysis history")
 		fmt.Fprintln(w, "0. Exit")
 		choice, err := readLine(scanner, w, "Choose an option: ")
 		if err != nil {
@@ -321,14 +350,11 @@ func runCLI(r io.Reader, w io.Writer) error {
 				fmt.Fprintln(w, "Error:", err)
 			}
 		case "7":
-			printStatistics(w, manager.GetStatistics())
-		case "8":
 			id, err := manager.CreateAnalysis()
 			if err != nil {
 				fmt.Fprintln(w, "Error:", err)
 				continue
 			}
-			fmt.Fprintf(w, "Analysis #%d: %s\n", id, Pending)
 			if err := manager.ProcessAnalysis(id); err != nil {
 				fmt.Fprintln(w, "Error:", err)
 				continue
@@ -338,32 +364,15 @@ func runCLI(r io.Reader, w io.Writer) error {
 				fmt.Fprintln(w, "Error:", err)
 				continue
 			}
-			fmt.Fprintf(w, "Analysis #%d: %s (passed through %s)\n", id, analysis.Status, Processing)
+			fmt.Fprintf(w, "Analysis #%d | Status: %s | Saved to history\n", id, analysis.Status)
 			printStatistics(w, *analysis.Result)
-		case "9":
-			input, err := readLine(scanner, w, "Enter analysis ID: ")
-			if err != nil {
-				return err
-			}
-			id, err := strconv.Atoi(input)
-			if err != nil || id <= 0 {
-				fmt.Fprintln(w, "Error: analysis ID must be a positive integer")
-				continue
-			}
-			analysis, err := manager.GetAnalysis(id)
-			if err != nil {
-				fmt.Fprintln(w, "Error:", err)
-				continue
-			}
-			fmt.Fprintf(w, "Analysis #%d | Status: %s\n", analysis.ID, analysis.Status)
-			if analysis.Result != nil {
-				printStatistics(w, *analysis.Result)
-			}
+		case "8":
+			printAnalysisHistory(w, manager.ListAnalyses())
 		case "0":
 			fmt.Fprintln(w, "Goodbye!")
 			return nil
 		default:
-			fmt.Fprintln(w, "Invalid option. Choose 0-9.")
+			fmt.Fprintln(w, "Invalid option. Choose 0-8.")
 		}
 	}
 }

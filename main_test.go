@@ -165,13 +165,58 @@ func TestIndependentAnalysisSnapshots(t *testing.T) {
 	}
 }
 
+func TestAnalysisHistory(t *testing.T) {
+	manager := NewTaskManager()
+	if len(manager.ListAnalyses()) != 0 {
+		t.Fatal("history should start empty")
+	}
+
+	first, _ := manager.AddTask("Prepare for midterm")
+	_, _ = manager.AddTask("Cooking")
+
+	firstID, err := manager.CreateAnalysis()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.ProcessAnalysis(firstID); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.CompleteTask(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	secondID, _ := manager.CreateAnalysis()
+	if err := manager.ProcessAnalysis(secondID); err != nil {
+		t.Fatal(err)
+	}
+
+	history := manager.ListAnalyses()
+	if len(history) != 2 || history[0].ID != firstID || history[1].ID != secondID {
+		t.Fatalf("history should have both analyses in creation order: %+v", history)
+	}
+	if history[0].Result.Completed != 0 || history[1].Result.Completed != 1 {
+		t.Fatalf("saved results must reflect their input snapshots: %+v", history)
+	}
+
+	// Modifying the returned history must not alter the stored results.
+	history[0].Result.Completed = 999
+	if manager.ListAnalyses()[0].Result.Completed != 0 {
+		t.Fatal("history must return independent copies")
+	}
+}
+
 func TestCLI(t *testing.T) {
-	input := "1\nPrepare for midterm\n1\nCooking\n3\n1\n2\n7\n8\n9\n1\n0\n"
+	// Option 7 saves a snapshot; option 8 displays the history of both analyses.
+	input := "8\n7\n1\nPrepare for midterm\n1\nCooking\n3\n1\n2\n7\n3\n2\n7\n8\n0\n"
 	var output bytes.Buffer
 	if err := runCLI(strings.NewReader(input), &output); err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"Added task #1", "Completed", "Not completed", "Completion rate:   50.0%", "Analysis #1: Pending", "Analysis #1 | Status: Completed", "Goodbye!"} {
+	for _, expected := range []string{
+		"No saved analyses yet", "Error: add at least one task before analyzing",
+		"Added task #1", "Completed", "Not completed", "Analysis #1 | Status: Completed | Saved to history",
+		"Analysis #2 | Status: Completed | Saved to history", "Completion rate:   50.0%",
+		"Completion rate:   100.0%", "ANALYSIS HISTORY", "Goodbye!",
+	} {
 		if !strings.Contains(output.String(), expected) {
 			t.Errorf("terminal output missing %q", expected)
 		}
