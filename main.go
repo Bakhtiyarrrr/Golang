@@ -17,14 +17,14 @@ const (
 	Completed  = "Completed"
 )
 
-// Todo is one item in the user's to-do list.
+
 type Todo struct {
 	ID          int
 	Name        string
 	IsCompleted bool
 }
 
-// Statistics is the useful result of analyzing a to-do list.
+
 type Statistics struct {
 	Total          int
 	Completed      int
@@ -32,7 +32,7 @@ type Statistics struct {
 	CompletionRate float64
 }
 
-// AnalysisTask is a SIS processing task with input, state and result.
+
 type AnalysisTask struct {
 	ID     int
 	Input  []Todo
@@ -40,7 +40,7 @@ type AnalysisTask struct {
 	Result *Statistics
 }
 
-// Processor is an interface so other processing logic can be added later.
+
 type Processor interface {
 	Process(task *AnalysisTask) error
 }
@@ -193,7 +193,7 @@ func (m *TaskManager) GetAnalysis(id int) (AnalysisTask, error) {
 	return copyTask, nil
 }
 
-// ListAnalyses returns independent copies ordered by creation ID.
+
 func (m *TaskManager) ListAnalyses() []AnalysisTask {
 	result := make([]AnalysisTask, 0, len(m.analyses))
 	for id := range m.analyses {

@@ -197,7 +197,7 @@ func TestAnalysisHistory(t *testing.T) {
 		t.Fatalf("saved results must reflect their input snapshots: %+v", history)
 	}
 
-	// Modifying the returned history must not alter the stored results.
+	
 	history[0].Result.Completed = 999
 	if manager.ListAnalyses()[0].Result.Completed != 0 {
 		t.Fatal("history must return independent copies")
@@ -205,7 +205,7 @@ func TestAnalysisHistory(t *testing.T) {
 }
 
 func TestCLI(t *testing.T) {
-	// Option 7 saves a snapshot; option 8 displays the history of both analyses.
+	
 	input := "8\n7\n1\nPrepare for midterm\n1\nCooking\n3\n1\n2\n7\n3\n2\n7\n8\n0\n"
 	var output bytes.Buffer
 	if err := runCLI(strings.NewReader(input), &output); err != nil {

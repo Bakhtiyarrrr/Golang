@@ -24,12 +24,3 @@ An analysis starts as `Pending`, changes to `Processing` when the processor star
 
 The `Processor` interface is implemented by `ProgressProcessor` and can be extended for other types of analysis in later checkpoints. All data are in memory only, so they disappear when the program exits.
 
-## Verify
-
-```sh
-gofmt -l .
-go vet ./...
-go test ./...
-```
-
-The tests cover successful and invalid creation, retrieval and not found, successful processing and result correctness, lifecycle and invalid transitions, independent snapshots, and console interaction. No external dependencies, database, network or concurrency are used.
