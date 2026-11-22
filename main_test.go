@@ -197,7 +197,6 @@ func TestAnalysisHistory(t *testing.T) {
 		t.Fatalf("saved results must reflect their input snapshots: %+v", history)
 	}
 
-	
 	history[0].Result.Completed = 999
 	if manager.ListAnalyses()[0].Result.Completed != 0 {
 		t.Fatal("history must return independent copies")
@@ -205,17 +204,20 @@ func TestAnalysisHistory(t *testing.T) {
 }
 
 func TestCLI(t *testing.T) {
-	
-	input := "8\n7\n1\nPrepare for midterm\n1\nCooking\n3\n1\n2\n7\n3\n2\n7\n8\n0\n"
+
+	// 9 waits for an analysis processed by a worker, so the output is deterministic.
+	input := "8\n7\n1\nPrepare for midterm\n1\nCooking\n3\n1\n2\n7\n3\n2\n7\n9\n1\n9\n2\n9\n99\n8\n0\n"
 	var output bytes.Buffer
 	if err := runCLI(strings.NewReader(input), &output); err != nil {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
-		"No saved analyses yet", "Error: add at least one task before analyzing",
-		"Added task #1", "Completed", "Not completed", "Analysis #1 | Status: Completed | Saved to history",
-		"Analysis #2 | Status: Completed | Saved to history", "Completion rate:   50.0%",
-		"Completion rate:   100.0%", "ANALYSIS HISTORY", "Goodbye!",
+		"Worker pool started", "No saved analyses yet", "Error: add at least one task before analyzing",
+		"Added task #1", "Completed", "Not completed",
+		"Analysis #1 submitted to the worker queue", "Analysis #2 submitted to the worker queue",
+		"Analysis #1 | Status: Completed", "Analysis #2 | Status: Completed",
+		"Completion rate:   50.0%", "Completion rate:   100.0%",
+		"Error: analysis with ID 99 not found", "ANALYSIS HISTORY", "Goodbye!",
 	} {
 		if !strings.Contains(output.String(), expected) {
 			t.Errorf("terminal output missing %q", expected)
